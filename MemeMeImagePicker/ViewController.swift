@@ -8,13 +8,29 @@
 
 import UIKit
 
+struct Meme {
+    let topText:String
+    let bottomText:String
+    let image:UIImage
+    let memedImage:UIImage
+    
+    init(topText: String, bottomText: String, image: UIImage, memedImage: UIImage) {
+        self.topText = topText
+        self.bottomText = bottomText
+        self.image = image
+        self.memedImage = memedImage
+    }
+}
+
 class ViewController: UIViewController, UITextFieldDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     
+    @IBOutlet weak var toolBar: UIToolbar!
     @IBOutlet weak var imageView: UIImageView!
     @IBOutlet weak var cameraButton: UIBarButtonItem!
     @IBOutlet weak var topTextField: UITextField!
     @IBOutlet weak var bottomTextField: UITextField!
-
+    @IBOutlet weak var saveButton: UIBarButtonItem!
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -36,24 +52,80 @@ class ViewController: UIViewController, UITextFieldDelegate, UIImagePickerContro
         unsubscribeFromKeyboardNotifications()
     }
     
+    // MARK: Meme Model methods
+    func save() {
+        let meme = Meme(topText: self.topTextField.text!, bottomText: self.bottomTextField.text!, image: self.imageView.image!, memedImage: generateMemedImage())
+        
+        // should save the meme here
+        UIImageWriteToSavedPhotosAlbum(meme.memedImage, nil, nil, nil)
+        
+        // prompt user to share
+        shouldShareMeme(meme)
+    }
+    
+    func generateMemedImage() -> UIImage {
+        // Hide toolbar
+        self.toolBar.hidden = true
+        
+        // Render view to an image
+        UIGraphicsBeginImageContext(self.view.frame.size)
+        view.drawViewHierarchyInRect(self.view.frame, afterScreenUpdates: true)
+        let memedImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        
+        // Show toolbar
+        self.toolBar.hidden = false
+        
+        return memedImage
+    }
+    
     // MARK: UI Methods
+    
+    func shouldShareMeme(meme:Meme) {
+        let alert = UIAlertController(title: "Share", message: "Would you like to share this Meme", preferredStyle: .Alert)
+        let ok = UIAlertAction(title: "Ok", style: .Default) { (action:UIAlertAction!) in
+            print("Should share meme")
+            self.shareMeme(meme)
+        }
+        
+        let cancel = UIAlertAction(title: "Cancel", style: .Cancel) { (_:UIAlertAction!) in
+            print("Cancelled")
+        }
+        
+        alert.addAction(ok)
+        alert.addAction(cancel)
+        presentViewController(alert, animated: true, completion: nil)
+    }
+    
+    func shareMeme(meme:Meme) {
+        let activity = UIActivityViewController(activityItems: [meme.memedImage], applicationActivities: nil)
+        presentViewController(activity, animated: true, completion: {
+            self.resetUI()
+        })
+    }
+    
+    func resetUI() {
+        self.view.endEditing(true)
+        self.saveButton.enabled = false
+        self.topTextField.text = ""
+        self.bottomTextField.text = ""
+        self.imageView.image = nil
+    }
+    
     func setupUI() {
-        topTextField.textAlignment = .Center
-        topTextField.text = "TOP"
-        
-        bottomTextField.textAlignment = .Center
-        bottomTextField.text = "BOTTOM"
-        
-        // defaultTextAttributes
         let memeTextAttr = [
             NSStrokeColorAttributeName: UIColor.blackColor(),
             NSForegroundColorAttributeName: UIColor.whiteColor(),
             NSFontAttributeName: UIFont(name: "HelveticaNeue-CondensedBlack", size: 36)!,
-            NSStrokeWidthAttributeName: 3.0
+            NSStrokeWidthAttributeName: -3.0
         ]
         
         topTextField.defaultTextAttributes = memeTextAttr
         bottomTextField.defaultTextAttributes = memeTextAttr
+        topTextField.attributedPlaceholder = NSAttributedString(string: "TOP", attributes: [NSForegroundColorAttributeName: UIColor.whiteColor()])
+        bottomTextField.attributedPlaceholder = NSAttributedString(string: "BOTTOM", attributes: [NSForegroundColorAttributeName: UIColor.whiteColor()])
+        topTextField.textAlignment = .Center
+        bottomTextField.textAlignment = .Center
     }
     
     // MARK: Notifications
@@ -101,7 +173,6 @@ class ViewController: UIViewController, UITextFieldDelegate, UIImagePickerContro
     
     // MARK: UIImagePickerControllerDelegate
     func imagePickerControllerDidCancel(picker: UIImagePickerController) {
-        
         dismissViewControllerAnimated(true, completion: nil)
     }
     
@@ -110,7 +181,9 @@ class ViewController: UIViewController, UITextFieldDelegate, UIImagePickerContro
             imageView.image = image
         }
         
-        dismissViewControllerAnimated(true, completion: nil)
+        dismissViewControllerAnimated(true, completion: {
+            self.saveButton.enabled = true
+        })
     }
     
     // MARK: IBAction
@@ -126,6 +199,10 @@ class ViewController: UIViewController, UITextFieldDelegate, UIImagePickerContro
         picker.sourceType = UIImagePickerControllerSourceType.Camera
         
         presentViewController(picker, animated: true, completion: nil)
+    }
+    
+    @IBAction func saveButtonTapped(sender: AnyObject) {
+        save()
     }
 }
 

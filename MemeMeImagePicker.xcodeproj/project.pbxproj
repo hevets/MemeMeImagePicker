@@ -291,6 +291,7 @@
 				C4E23A761CE60DB4000A0BD4 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
